@@ -1,5 +1,6 @@
 from django.db import models
 from django.urls import reverse
+from django.core.exceptions import ObjectDoesNotExist
 
 
 class Attendee(models.Model):
@@ -24,6 +25,20 @@ class Attendee(models.Model):
 
     def get_api_url(self):
         return reverse("api_show_attendee", kwargs={"pk": self.pk})
+    
+    def create_badge(self):
+        try: 
+            self.badge
+            # same thing as below but more concise
+            # if self.badge:
+            #     pass
+        except ObjectDoesNotExist:
+            Badge.objects.create(attendee=self)
+            # Do not need the bottom 2 lines of code because create has a method
+            # within it that will automatically save the badge for the attendee
+                # badge = Badge.objects.create(attendee=self)
+                # self.badge.save()
+
 
 
 class Badge(models.Model):

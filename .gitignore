@@ -1,3 +1,6 @@
+# I manually added this in so when we push to git it won't show our API Keys
+# these are secret and should never be shared
+events/keys.py
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
