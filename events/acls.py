@@ -17,6 +17,7 @@ def get_location_picture_url(city, state):
     except (KeyError, IndexError):
         return {"picture_url": None}
 
+
 def get_weather(city, state):
     params = {
         "q" : f"{city}, {state}, US",
