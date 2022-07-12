@@ -1,19 +1,22 @@
 from django.http import JsonResponse
 from common.json import ModelEncoder
-from events.api_views import ConferenceListEncoder
-from .models import Attendee
+from .models import Attendee, ConferenceVO
 from django.views.decorators.http import require_http_methods
-from events.models import Conference
 import json
+
+class ConferenceVODetailEncoder(ModelEncoder):
+    model = ConferenceVO
+    properties = ["name", "import_href"]
+
 
 class AttendeeListEncoder(ModelEncoder):
     model = Attendee
     properties = ["name"]
 
 @require_http_methods(["GET", "POST"])
-def api_list_attendees(request, conference_id):
+def api_list_attendees(request, conference_vo_id=None):
     if request.method == "GET":
-        attendees = Attendee.objects.filter(conference=conference_id)
+        attendees = Attendee.objects.filter(conference=conference_vo_id)
         return JsonResponse(
             attendees,
             encoder = AttendeeListEncoder,
@@ -22,18 +25,26 @@ def api_list_attendees(request, conference_id):
     else: #POST
         content = json.loads(request.body)
         try:
-            conference = Conference.objects.get(id=conference_id)
+            # THIS LINE IS ADDED
+            conference_href = content["conference"]
+
+            # THIS LINE CHANGES TO ConferenceVO and import_href
+            conference = ConferenceVO.objects.get(import_href=conference_href)
+
             content["conference"] = conference
-        except Conference.DoesNotExist:
+
+            ## THIS CHANGES TO ConferenceVO
+        except ConferenceVO.DoesNotExist:
             return JsonResponse(
-                {"message": "Invalid Conference id"},
-                status = 400,
+                {"message": "Invalid conference id"},
+                status=400,
             )
+
         attendee = Attendee.objects.create(**content)
         return JsonResponse(
             attendee,
-            encoder = AttendeeDetailEncoder,
-            safe = False
+            encoder=AttendeeDetailEncoder,
+            safe=False,
         )
     """
     Lists the attendees names and the link to the attendee
@@ -77,7 +88,7 @@ class AttendeeDetailEncoder(ModelEncoder):
         "conference",
     ]
     encoders = {
-        "conference": ConferenceListEncoder()
+        "conference": ConferenceVODetailEncoder()
     }
 
     # could technically use get_extra_data to specify all of the data you want 
@@ -98,9 +109,9 @@ def api_show_attendee(request, pk):
         try:
             if "conference" in content:
                 #below is saying get the name and href from the id lookup im giving you
-                conference = Conference.objects.get(id=content["conference"])
+                conference = ConferenceVO.objects.get(id=content["conference"])
                 content["conference"] = conference
-        except Conference.DoesNotExist:
+        except ConferenceVO.DoesNotExist:
             return JsonResponse(
                 {"message": "Invalid Conference id"},
                 status = 400
