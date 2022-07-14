@@ -6,6 +6,7 @@ from django.views.decorators.http import require_http_methods
 import json
 from events.models import Conference
 from presentations.models import Status
+import pika
 
 
 class PresentationListEncoder(ModelEncoder):
@@ -28,16 +29,78 @@ class PresentationDetailEncoder(ModelEncoder):
         "title",
         "synopsis",
         "created",
-        "status",
         "conference",
     ]
+
+    encoders = {
+        "conference": ConferenceListEncoder()
+    }
 
     def get_extra_data(self,o):
         return {"status": o.status.name}
     
-    encoders = {
-        "conference": ConferenceListEncoder()
-    }
+
+
+@require_http_methods(["PUT"])
+def api_approve_presentation(request, pk):
+    presentation = Presentation.objects.get(id=pk)
+    presentation.approve()
+    approved = "APPROVED"
+    # print(approved)
+    send_message(approved, presentation)
+    return JsonResponse(
+        presentation,
+        encoder=PresentationDetailEncoder,
+        safe=False,
+    )
+
+
+
+@require_http_methods(["PUT"])
+def api_reject_presentation(request, pk):
+    presentation = Presentation.objects.get(id=pk)
+    presentation.reject()
+    rejected = "REJECTED"
+    send_message(rejected, presentation)
+    return JsonResponse(
+        presentation,
+        encoder=PresentationDetailEncoder,
+        safe=False,
+    )
+
+
+def send_message(input, presentation):
+    parameters = pika.ConnectionParameters(host="rabbitmq")
+    connection = pika.BlockingConnection(parameters)
+    channel = connection.channel()
+    if input == "APPROVED":
+        # print("approve message working")
+        channel.queue_declare(queue="presentation_approvals")
+        data = json.dumps({
+            "presenter_name": presentation.presenter_name,
+            "presenter_email": presentation.presenter_email,
+            "title": presentation.title,
+        })
+        channel.basic_publish(
+            exchange="",
+            routing_key="presentation_approvals",
+            body=data,
+        )
+        connection.close()
+    if input == "REJECTED":
+        # print("rejection message working")
+        channel.queue_declare(queue="presentation_rejections")
+        data = json.dumps({
+            "presenter_name": presentation.presenter_name,
+            "presenter_email": presentation.presenter_email,
+            "title": presentation.title,
+        })
+        channel.basic_publish(
+            exchange="",
+            routing_key="presentation_rejections",
+            body=data,
+        )
+        connection.close()
 
 @require_http_methods(["GET", "POST"])
 def api_list_presentations(request, conference_id):
