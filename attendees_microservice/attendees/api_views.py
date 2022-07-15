@@ -3,6 +3,7 @@ from common.json import ModelEncoder
 from .models import Attendee, ConferenceVO
 from django.views.decorators.http import require_http_methods
 import json
+from attendees.models import AccountVO
 
 class ConferenceVODetailEncoder(ModelEncoder):
     model = ConferenceVO
@@ -25,12 +26,7 @@ def api_list_attendees(request, conference_vo_id=None):
     else: #POST
         content = json.loads(request.body)
         try:
-            # THIS LINE IS ADDED
-            conference_href = content["conference"]
-
-            # THIS LINE CHANGES TO ConferenceVO and import_href
-            conference = ConferenceVO.objects.get(import_href=conference_href)
-
+            conference = ConferenceVO.objects.get(id=conference_vo_id)
             content["conference"] = conference
 
             ## THIS CHANGES TO ConferenceVO
@@ -90,6 +86,23 @@ class AttendeeDetailEncoder(ModelEncoder):
     encoders = {
         "conference": ConferenceVODetailEncoder()
     }
+
+    def get_extra_data(self, o):
+        count = AccountVO.objects.filter(email = o.email).count()
+        if count > 0:
+            return {
+                "count": count,
+                "has_account": True
+            }
+        else:
+            return {
+                "o.email": o.email,
+                "count": count,
+                "has_account": False
+            }
+        # Get the count of AccountVO objects with email equal to o.email
+        # Return a dictionary with "has_account": True if count > 0
+        # Otherwise, return a dictionary with "has_account": False
 
     # could technically use get_extra_data to specify all of the data you want 
     # to return but since you want to return all of the properties Conference has to 

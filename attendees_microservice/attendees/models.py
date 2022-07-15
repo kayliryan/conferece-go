@@ -1,12 +1,21 @@
 from django.db import models
+from django.forms import BooleanField
 from django.urls import reverse
 from django.core.exceptions import ObjectDoesNotExist
+
+class AccountVO(models.Model):
+    email = models.EmailField()
+    first_name = models.CharField(max_length=200)
+    last_name = models.CharField(max_length=200)
+    is_active = models.BooleanField()
+    updated = models.CharField(max_length=200)
+
 
 class ConferenceVO(models.Model):
     import_href = models.CharField(max_length=200, unique=True)
     name = models.CharField(max_length=200)
 
-    
+
 class Attendee(models.Model):
     """
     The Attendee model represents someone that wants to attend

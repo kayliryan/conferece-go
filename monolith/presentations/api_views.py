@@ -82,7 +82,7 @@ def send_message(input, presentation):
             "title": presentation.title,
         })
         channel.basic_publish(
-            exchange="",
+            exchange="", # Just a name, default name is this empty string
             routing_key="presentation_approvals",
             body=data,
         )
